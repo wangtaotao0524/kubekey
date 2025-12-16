@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	capierrors "sigs.k8s.io/cluster-api/errors"
-	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -70,12 +69,12 @@ func (r *Reconciler) createInstance(ctx context.Context, machineScope *scope.Mac
 		Spec: *instanceSpec,
 	}
 
-	instance.OwnerReferences = capiutil.EnsureOwnerRef(instance.OwnerReferences, metav1.OwnerReference{
-		APIVersion: infrav1.GroupVersion.String(),
-		Kind:       "KKCluster",
-		Name:       machineScope.InfraCluster.InfraClusterName(),
-		UID:        machineScope.InfraCluster.KKCluster.UID,
-	})
+	// instance.OwnerReferences = capiutil.EnsureOwnerRef(instance.OwnerReferences, metav1.OwnerReference{
+	// 	APIVersion: infrav1.GroupVersion.String(),
+	// 	Kind:       "KKCluster",
+	// 	Name:       machineScope.InfraCluster.InfraClusterName(),
+	// 	UID:        machineScope.InfraCluster.KKCluster.UID,
+	// })
 
 	if err := r.Client.Create(ctx, instance); err != nil {
 		return nil, err
