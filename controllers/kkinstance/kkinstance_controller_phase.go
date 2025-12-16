@@ -216,12 +216,12 @@ func (r *Reconciler) reconcileBinaryService(_ context.Context, sshClient ssh.Int
 		return nil
 	}
 
-	instanceScope.Info("Reconcile binary service")
+	instanceScope.Info("Skipped to reconcile binary service")
 
-	svc := r.getBinaryService(sshClient, kkInstanceScope, instanceScope, kkInstanceScope.Distribution())
-	if err := svc.Download(r.WaitKKInstanceTimeout); err != nil {
-		return err
-	}
+	// svc := r.getBinaryService(sshClient, kkInstanceScope, instanceScope, kkInstanceScope.Distribution())
+	// if err := svc.Download(r.WaitKKInstanceTimeout); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
