@@ -246,20 +246,20 @@ func (r *Reconciler) reconcileContainerManager(_ context.Context, sshClient ssh.
 		return nil
 	}
 
-	instanceScope.Info("Reconcile container manager")
+	instanceScope.Info("Skipped reconcile container manager")
 
-	svc := r.getContainerManager(sshClient, scope, instanceScope)
-	if svc.IsExist() {
-		instanceScope.V(2).Info(fmt.Sprintf("container manager %s is exist, skip installation", svc.Type()))
-		return nil
-	}
+	// svc := r.getContainerManager(sshClient, scope, instanceScope)
+	// if svc.IsExist() {
+	// 	instanceScope.V(2).Info(fmt.Sprintf("container manager %s is exist, skip installation", svc.Type()))
+	// 	return nil
+	// }
 
-	if err := svc.Get(r.WaitKKInstanceTimeout); err != nil {
-		return err
-	}
-	if err := svc.Install(); err != nil {
-		return err
-	}
+	// if err := svc.Get(r.WaitKKInstanceTimeout); err != nil {
+	// 	return err
+	// }
+	// if err := svc.Install(); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
