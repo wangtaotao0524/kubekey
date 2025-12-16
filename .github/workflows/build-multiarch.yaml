@@ -37,30 +37,20 @@ jobs:
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
 
-      # 5. 构建 Docker 镜像 (不推送)
-      - name: Build docker images
+      # 5. 构建 Docker 镜像并打包成 OCI 格式的 tar 文件 (已修复多平台导出错误)
+      - name: Build and save docker image to OCI tar
         run: |
-          # 假设您的 Makefile 中的 'release-prod' 目标会构建并标记镜像，
-          # 并且标签是 $RELEASE_TAG。这里我们使用 docker build 替代 make，以便更好地控制流程。
-          # 请根据您的实际构建命令调整，确保构建成功并标记了镜像。
-          # 示例：
-          IMAGE_NAME="your-image-name" # 替换为您的实际镜像名称
+          IMAGE_NAME="your-image-name" # <<== 替换为您的实际镜像名称
           TAG="${IMAGE_NAME}:${{ env.RELEASE_TAG }}"
+          OUTPUT_PATH="/tmp/image-${{ env.RELEASE_TAG }}.tar"
           
-          # 使用 buildx 构建多平台镜像并加载到本地（供后续保存）
+          echo "构建镜像: ${TAG}"
+          
+          # 使用 buildx 构建多平台镜像并输出为 OCI 格式的 tar 包
           docker buildx build . \
             --platform linux/amd64,linux/arm64 \
             --tag $TAG \
-            --output type=docker,dest=/tmp/image.tar
-
-      # 6. 将镜像保存为 .tar 文件 (如果上一步使用 --output type=docker,dest=/tmp/image.tar则不需要此步骤)
-      # 如果上一步使用 make release-prod 且该命令只执行了 docker build 或 buildx build (没有推送)，
-      # 您可以使用以下命令将本地构建的镜像保存：
-      # - name: Save docker image to tar
-      #   run: |
-      #     IMAGE_NAME="your-image-name" # 替换为您的实际镜像名称
-      #     TAG="${IMAGE_NAME}:${{ env.RELEASE_TAG }}"
-      #     docker save $TAG -o /tmp/image.tar
+            --output type=oci,dest=${OUTPUT_PATH} # <-- 关键更改：使用 type=oci
       
       # 7. 上传 .tar 文件作为工作流产物
       - name: Upload docker image artifact
