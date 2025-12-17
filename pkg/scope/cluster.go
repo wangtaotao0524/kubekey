@@ -218,9 +218,11 @@ func (s *ClusterScope) AllInstances() ([]*infrav1.KKInstance, error) {
 
 // shouldExcludeInstance returns true if the instance should be filtered out, false otherwise.
 func shouldExcludeInstance(cluster *infrav1.KKCluster, instance *infrav1.KKInstance) bool {
-	if metav1.GetControllerOf(instance) != nil && !capiutil.IsOwnedByObject(instance, cluster) {
-		return true
-	}
+	//移除了与kkcluster的关联，避免影响argocd的UI展示
+	//通过label和namespace即可选出所有跟当前集群相关的kkinstance了，没必要在ownerReferences关联上kkcluster
+	// if metav1.GetControllerOf(instance) != nil && !capiutil.IsOwnedByObject(instance, cluster) {
+	// 	return true
+	// }
 
 	return false
 }
