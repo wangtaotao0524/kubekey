@@ -196,7 +196,9 @@ func (s *ClusterScope) AllInstances() ([]*infrav1.KKInstance, error) {
 		context.TODO(),
 		allInstances,
 		client.InNamespace(s.KKCluster.Namespace),
-		client.MatchingLabels(s.KKCluster.Labels),
+		client.MatchingLabels{
+			infrav1.KKClusterLabelName: s.KKCluster.Name,
+		},
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list kkInstances")
