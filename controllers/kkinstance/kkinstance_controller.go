@@ -313,6 +313,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Re
 	return r.reconcileNormal(ctx, instanceScope, infraCluster, infraCluster)
 }
 
+func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, op string) error {
+	infraCluster := instanceScope.InfraCluster
+	if infraCluster.Spec.ControlPlaneLoadBalancer == nil || infraCluster.Spec.ControlPlaneLoadBalancer.Host == "" {
+		return nil
+	}
+
+	lbHost := infraCluster.Spec.ControlPlaneLoadBalancer.Host
+	auth := infraCluster.Spec.Nodes.Auth
+
+	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
+	if err := sshClient.Connect(); err != nil {
+		return err
+	}
+	defer sshClient.Close()
+
+	clusterName := instanceScope.Cluster.Name
+	port := infraCluster.Spec.ControlPlaneEndpoint.Port
+	address := instanceScope.KKInstance.Spec.Address
+
+	scriptPath := "/usr/bin/kubekey_update_lb.sh"
+	cmd := fmt.Sprintf("%s %s %s %d %s", scriptPath, clusterName, op, port, address)
+	instanceScope.Info("Updating ControlPlaneLoadBalancer", "host", lbHost, "command", cmd)
+
+	if _, err := sshClient.Cmd(cmd); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.V(4).Info("Reconcile KKInstance delete")
@@ -330,6 +359,13 @@ func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.I
 	if err := instanceScope.PatchObject(); err != nil {
 		instanceScope.Error(err, "unable to patch object")
 		return ctrl.Result{}, err
+	}
+
+	if instanceScope.IsControlPlane() {
+		if err := r.updateLoadBalancer(ctx, instanceScope, "remove"); err != nil {
+			instanceScope.Error(err, "failed to update load balancer")
+			return ctrl.Result{}, err
+		}
 	}
 
 	sshClient := r.getSSHClient(instanceScope)
@@ -381,6 +417,13 @@ func (r *Reconciler) reconcileNormal(ctx context.Context, instanceScope *scope.I
 		if pollErr != nil {
 			instanceScope.Error(pollErr, "failed to reconcile phase")
 			return ctrl.Result{RequeueAfter: defaultRequeueWait}, pollErr
+		}
+	}
+
+	if instanceScope.IsControlPlane() && instanceScope.KKInstance.Status.State != infrav1.InstanceStateRunning {
+		if err := r.updateLoadBalancer(ctx, instanceScope, "add"); err != nil {
+			instanceScope.Error(err, "failed to update load balancer")
+			return ctrl.Result{}, err
 		}
 	}
 
