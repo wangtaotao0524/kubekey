@@ -307,17 +307,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Re
 	}()
 
 	if !kkInstance.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instanceScope, infraCluster)
+		return r.reconcileDelete(ctx, instanceScope, infraCluster, infraCluster)
 	}
 
 	return r.reconcileNormal(ctx, instanceScope, infraCluster, infraCluster)
 }
 
-func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, op string) error {
-	infraCluster := instanceScope.InfraCluster
-
-	lbHost := infraCluster.ControlPlaneLoadBalancer().Host
-	auth := infraCluster.GlobalAuth()
+func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, kkInstanceScope scope.KKInstanceScope, op string) error {
+	lbHost := lbScope.ControlPlaneLoadBalancer().Host
+	auth := kkInstanceScope.GlobalAuth()
 
 	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
 	if err := sshClient.Connect(); err != nil {
@@ -326,7 +324,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	defer sshClient.Close()
 
 	clusterName := instanceScope.Cluster.Name
-	port := infraCluster.ControlPlaneEndpoint().Port
+	port := lbScope.ControlPlaneEndpoint().Port
 	address := instanceScope.KKInstance.Spec.Address
 
 	scriptPath := "/usr/bin/kubekey_update_lb.sh"
@@ -339,7 +337,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	return nil
 }
 
-func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope) (ctrl.Result, error) {
+func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, kkInstanceScope scope.KKInstanceScope) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.V(4).Info("Reconcile KKInstance delete")
 
@@ -359,7 +357,7 @@ func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.I
 	}
 
 	if instanceScope.IsControlPlane() {
-		if err := r.updateLoadBalancer(ctx, instanceScope, "remove"); err != nil {
+		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, kkInstanceScope, "remove"); err != nil {
 			instanceScope.Error(err, "failed to update load balancer")
 			return ctrl.Result{}, err
 		}
@@ -418,7 +416,7 @@ func (r *Reconciler) reconcileNormal(ctx context.Context, instanceScope *scope.I
 	}
 
 	if instanceScope.IsControlPlane() && instanceScope.KKInstance.Status.State != infrav1.InstanceStateRunning {
-		if err := r.updateLoadBalancer(ctx, instanceScope, "add"); err != nil {
+		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, kkInstanceScope, "add"); err != nil {
 			instanceScope.Error(err, "failed to update load balancer")
 			return ctrl.Result{}, err
 		}
