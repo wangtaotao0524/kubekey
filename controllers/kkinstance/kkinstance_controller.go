@@ -315,12 +315,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Re
 
 func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, op string) error {
 	infraCluster := instanceScope.InfraCluster
-	if infraCluster.Spec.ControlPlaneLoadBalancer == nil || infraCluster.Spec.ControlPlaneLoadBalancer.Host == "" {
-		return nil
-	}
 
-	lbHost := infraCluster.Spec.ControlPlaneLoadBalancer.Host
-	auth := infraCluster.Spec.Nodes.Auth
+	lbHost := infraCluster.ControlPlaneLoadBalancer().Host
+	auth := infraCluster.GlobalAuth()
 
 	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
 	if err := sshClient.Connect(); err != nil {
@@ -329,7 +326,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	defer sshClient.Close()
 
 	clusterName := instanceScope.Cluster.Name
-	port := infraCluster.Spec.ControlPlaneEndpoint.Port
+	port := infraCluster.ControlPlaneEndpoint().Port
 	address := instanceScope.KKInstance.Spec.Address
 
 	scriptPath := "/usr/bin/kubekey_update_lb.sh"
