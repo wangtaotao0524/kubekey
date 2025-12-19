@@ -313,11 +313,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Re
 	return r.reconcileNormal(ctx, instanceScope, infraCluster, infraCluster)
 }
 
-func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, kkInstanceScope scope.KKInstanceScope, op string) error {
+func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, op string) error {
 	lbHost := lbScope.ControlPlaneLoadBalancer().Host
-	auth := kkInstanceScope.GlobalAuth().DeepCopy()
+	auth := instanceScope.KKInstance.Spec.Auth
 
-	sshClient := ssh.NewClient(lbHost, *auth, &instanceScope.Logger)
+	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
 	if err := sshClient.Connect(); err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.I
 	}
 
 	if instanceScope.IsControlPlane() {
-		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, kkInstanceScope, "remove"); err != nil {
+		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, "remove"); err != nil {
 			instanceScope.Error(err, "failed to update load balancer")
 			return ctrl.Result{}, err
 		}
@@ -416,7 +416,7 @@ func (r *Reconciler) reconcileNormal(ctx context.Context, instanceScope *scope.I
 	}
 
 	if instanceScope.IsControlPlane() && instanceScope.KKInstance.Status.State != infrav1.InstanceStateRunning {
-		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, kkInstanceScope, "add"); err != nil {
+		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, "add"); err != nil {
 			instanceScope.Error(err, "failed to update load balancer")
 			return ctrl.Result{}, err
 		}
