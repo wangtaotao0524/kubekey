@@ -317,7 +317,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	lbHost := lbScope.ControlPlaneLoadBalancer().Host
 	auth := kkInstanceScope.GlobalAuth().DeepCopy()
 
-	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
+	sshClient := ssh.NewClient(lbHost, *auth, &instanceScope.Logger)
 	if err := sshClient.Connect(); err != nil {
 		return err
 	}
