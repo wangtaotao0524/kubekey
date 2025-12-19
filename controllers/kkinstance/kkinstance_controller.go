@@ -331,7 +331,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	cmd := fmt.Sprintf("%s %s %s %d %s", scriptPath, clusterName, op, port, address)
 	instanceScope.Info("Updating ControlPlaneLoadBalancer", "host", lbHost, "command", cmd)
 
-	if _, err := sshClient.Cmd(cmd); err != nil {
+	if _, err := sshClient.SudoCmd(cmd); err != nil {
 		return err
 	}
 	return nil
