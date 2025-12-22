@@ -220,11 +220,11 @@ func (r *Reconciler) reconcileNormal(ctx context.Context, clusterScope *scope.Cl
 		return reconcile.Result{RequeueAfter: 15 * time.Second}, nil //nolint:nilerr
 	}
 	conditions.MarkTrue(kkCluster, infrav1.ExternalLoadBalancerReadyCondition)
-
-	kkCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
-		Host: clusterScope.ControlPlaneLoadBalancer().Host,
-		Port: clusterScope.APIServerPort(),
-	}
+	// 直接使用kkcluster的定义
+	// kkCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+	// 	Host: clusterScope.ControlPlaneLoadBalancer().Host,
+	// 	Port: clusterScope.APIServerPort(),
+	// }
 
 	kkCluster.Status.Ready = true
 
