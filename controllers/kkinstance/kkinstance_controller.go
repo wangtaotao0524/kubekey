@@ -327,7 +327,7 @@ func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scop
 	port := lbScope.ControlPlaneEndpoint().Port
 	address := instanceScope.KKInstance.Spec.Address
 
-	scriptPath := os.Getenv("UPDATE_SCRIPT_PATH")
+	scriptPath := os.Getenv("UPDATE_LB_SCRIPT_PATH")
     if scriptPath == "" {
         scriptPath = "/usr/bin/kubekey_update_lb.sh"
     }
