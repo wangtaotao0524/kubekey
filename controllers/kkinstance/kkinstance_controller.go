@@ -19,7 +19,6 @@ package kkinstance
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"time"
 
@@ -308,40 +307,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Re
 	}()
 
 	if !kkInstance.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instanceScope, infraCluster, infraCluster)
+		return r.reconcileDelete(ctx, instanceScope, infraCluster)
 	}
 
 	return r.reconcileNormal(ctx, instanceScope, infraCluster, infraCluster)
 }
 
-func (r *Reconciler) updateLoadBalancer(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, op string) error {
-	lbHost := lbScope.ControlPlaneLoadBalancer().Host
-	auth := instanceScope.KKInstance.Spec.Auth
 
-	sshClient := ssh.NewClient(lbHost, auth, &instanceScope.Logger)
-	if err := sshClient.Connect(); err != nil {
-		return err
-	}
-	defer sshClient.Close()
 
-	clusterName := instanceScope.Cluster.Name
-	port := lbScope.ControlPlaneEndpoint().Port
-	address := instanceScope.KKInstance.Spec.Address
-
-	scriptPath := os.Getenv("UPDATE_LB_SCRIPT_PATH")
-    if scriptPath == "" {
-        scriptPath = "/usr/bin/kubekey_update_lb.sh"
-    }
-	cmd := fmt.Sprintf("%s %s %s %d %s", scriptPath, clusterName, op, port, address)
-	instanceScope.Info("Updating ControlPlaneLoadBalancer", "host", lbHost, "command", cmd)
-
-	if _, err := sshClient.SudoCmd(cmd); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope, kkInstanceScope scope.KKInstanceScope) (ctrl.Result, error) {
+func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.InstanceScope, lbScope scope.LBScope) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.V(4).Info("Reconcile KKInstance delete")
 
@@ -360,12 +334,7 @@ func (r *Reconciler) reconcileDelete(ctx context.Context, instanceScope *scope.I
 		return ctrl.Result{}, err
 	}
 
-	if instanceScope.IsControlPlane() {
-		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, "remove"); err != nil {
-			instanceScope.Error(err, "failed to update load balancer")
-			return ctrl.Result{}, err
-		}
-	}
+	
 
 	sshClient := r.getSSHClient(instanceScope)
 	if err := r.reconcileDeletingBootstrap(ctx, sshClient, instanceScope, lbScope); err != nil {
@@ -419,12 +388,7 @@ func (r *Reconciler) reconcileNormal(ctx context.Context, instanceScope *scope.I
 		}
 	}
 
-	if instanceScope.IsControlPlane() && instanceScope.KKInstance.Status.State != infrav1.InstanceStateRunning {
-		if err := r.updateLoadBalancer(ctx, instanceScope, lbScope, "add"); err != nil {
-			instanceScope.Error(err, "failed to update load balancer")
-			return ctrl.Result{}, err
-		}
-	}
+	
 
 	instanceScope.SetState(infrav1.InstanceStateRunning)
 	instanceScope.Info("Reconcile KKInstance normal successful")
