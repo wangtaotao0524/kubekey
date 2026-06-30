@@ -45,8 +45,7 @@ func (s *Service) AddUsers() error {
 // SetHostname sets the hostname of the machine.
 func (s *Service) SetHostname() error {
 	if _, err := s.sshClient.SudoCmdf(
-		"hostnamectl set-hostname %s && sed -i '/^127.0.0.1/s/.*/127.0.0.1      %s/g' /etc/hosts",
-		s.instanceScope.HostName(),
+		"hostnamectl set-hostname %s",
 		s.instanceScope.HostName()); err != nil {
 		return errors.Wrapf(err, "failed to set host name [%s]", s.instanceScope.HostName())
 	}
